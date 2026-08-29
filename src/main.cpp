@@ -102,7 +102,7 @@ void setup()
     lv_obj_add_event_cb(
         screen,
         screen_touched,
-        LV_EVENT_PRESSED,
+        LV_EVENT_PRESSING,
         nullptr);
 }
 
