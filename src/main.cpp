@@ -1,6 +1,8 @@
 #include <Arduino.h>
 #include <esp32_smartdisplay.h>
-#include <stdlib.h> 
+#include <stdlib.h>
+#include <WiFi.h>
+#include "secrets.h"
 
 static lv_obj_t *screen = nullptr;
 static constexpr unsigned int BG_COLOR = 0x101820;
@@ -26,7 +28,6 @@ static void make_circle(const lv_point_t &point)
     lv_obj_clear_flag(circle, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_clear_flag(circle, LV_OBJ_FLAG_CLICKABLE);
 
-
     int CIRCLE_SIZE = (rand() % 100) + 20; // Random size between 20 and 120 pixels
 
     lv_obj_set_size(circle, CIRCLE_SIZE, CIRCLE_SIZE);
@@ -37,7 +38,6 @@ static void make_circle(const lv_point_t &point)
 
     lv_obj_set_style_radius(circle, LV_RADIUS_CIRCLE, LV_PART_MAIN);
 
-
     lv_obj_set_style_bg_color(
         circle,
         lv_color_hex(((rand() % 16777215) + 1)), // 0xFFFFFF as decimmal. Simple random color generator
@@ -47,7 +47,6 @@ static void make_circle(const lv_point_t &point)
 
     ++circle_count;
 }
-
 
 static void screen_touched(lv_event_t *event)
 {
@@ -75,6 +74,32 @@ static void calibrate_touch()
     touch_calibration_data.deltaY = 0.0F;
 }
 
+static void wifiEvent(WiFiEvent_t event, WiFiEventInfo_t info)
+{
+    switch (event) {
+        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+            Serial.print("IP: ");
+            Serial.println(WiFi.localIP());
+            break;
+
+        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+            Serial.print("WiFi disconnected, reason: ");
+            Serial.println(info.wifi_sta_disconnected.reason);
+            break;
+
+        default:
+            break;
+    }
+}
+
+void static connectWifi()
+{
+    WiFi.onEvent(wifiEvent);
+    WiFi.mode(WIFI_STA);
+    WiFi.setAutoReconnect(true);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+}
+
 void setup()
 {
     Serial.begin(115200);
@@ -91,6 +116,8 @@ void setup()
         Serial.println("Failed to obtain the active LVGL screen");
         return;
     }
+
+    connectWifi();
 
     lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(screen, LV_OBJ_FLAG_CLICKABLE);

@@ -2,3 +2,4 @@
 .vscode/
 .pio/
 .github/
+secrets.h
