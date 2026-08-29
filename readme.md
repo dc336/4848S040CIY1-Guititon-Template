@@ -4,6 +4,12 @@ I struggled getting this display working with SquareLine Studio, so I put togeth
 
 Compared to typical CYD boards, it’s a pretty display with convenient JST/2.54mm IO on the back. It also includes a speaker, touch, battery, and an antenna.
 
+
+<img height="270" alt="image" src="https://github.com/user-attachments/assets/4b1f502f-fcd6-4ed7-a2b0-75eace003a87" /><img height="270" alt="diagram" src="https://github.com/user-attachments/assets/e3276035-a552-4b37-a719-aef75bb5b598" />
+
+<img width="573" height="270" alt="image" src="https://github.com/user-attachments/assets/ccb99d0c-7623-4902-9aae-844de00c347e" />
+
+
 ## Installation
 
 1. Install [Visual Studio Code](https://code.visualstudio.com/download) and the [PlatformIO IDE extension](https://platformio.org/install/ide?install=vscode).
