@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include <WiFi.h>
 #include "secrets.h"
+#include <ArduinoJson.h>
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 
 static lv_obj_t *screen = nullptr;
 static constexpr unsigned int BG_COLOR = 0x101820;
@@ -76,28 +79,104 @@ static void calibrate_touch()
 
 static void wifiEvent(WiFiEvent_t event, WiFiEventInfo_t info)
 {
-    switch (event) {
-        case ARDUINO_EVENT_WIFI_STA_GOT_IP:
-            Serial.print("IP: ");
-            Serial.println(WiFi.localIP());
-            break;
+    switch (event)
+    {
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+        Serial.print("IP: ");
+        Serial.println(WiFi.localIP());
+        break;
 
-        case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
-            Serial.print("WiFi disconnected, reason: ");
-            Serial.println(info.wifi_sta_disconnected.reason);
-            break;
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+        Serial.print("WiFi disconnected, reason: ");
+        Serial.println(info.wifi_sta_disconnected.reason);
+        break;
 
-        default:
-            break;
+    default:
+        break;
     }
 }
 
-void static connectWifi()
+static bool syncClock()
+{
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+
+    struct tm currentTime;
+
+    if (!getLocalTime(&currentTime, 15000))
+    {
+        Serial.println("Could not synchronize clock");
+        return false;
+    }
+
+    Serial.println("Clock synchronized");
+    return true;
+}
+
+static bool connectWifi()
 {
     WiFi.onEvent(wifiEvent);
     WiFi.mode(WIFI_STA);
     WiFi.setAutoReconnect(true);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+    Serial.print("Connecting to WiFi");
+
+    unsigned long started = millis();
+
+    while (WiFi.status() != WL_CONNECTED &&
+           millis() - started < 20000)
+    {
+        Serial.print(".");
+        delay(250);
+    }
+
+    Serial.println();
+
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        Serial.println("WiFi connection timed out");
+        return false;
+    }
+
+    Serial.print("Connected. IP: ");
+    Serial.println(WiFi.localIP());
+    return true;
+}
+
+static void testHttps()
+{
+    WiFiClientSecure client;
+
+    client.setInsecure();
+
+    HTTPClient https;
+
+    if (!https.begin(client, "https://dummyjson.com/test"))
+    {
+        Serial.println("HTTPS initialization failed");
+        return;
+    }
+
+    int httpCode = https.GET();
+
+    Serial.print("HTTP code: ");
+    Serial.println(httpCode);
+
+    if (httpCode >= 200 && httpCode < 300)
+    {
+        String payload = https.getString();
+        JsonDocument doc;
+        deserializeJson(doc, payload);
+        const char* status = doc["status"];
+        Serial.println(status);
+    }
+    else if (httpCode < 0)
+    {
+        Serial.print("HTTPS error: ");
+        Serial.println(HTTPClient::errorToString(httpCode));
+    }
+
+    https.end();
 }
 
 void setup()
@@ -117,7 +196,13 @@ void setup()
         return;
     }
 
-    connectWifi();
+    if (connectWifi())
+    {
+        if (syncClock())
+        {
+            testHttps();
+        }
+    }
 
     lv_obj_clear_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(screen, LV_OBJ_FLAG_CLICKABLE);
